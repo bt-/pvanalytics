@@ -14,6 +14,22 @@ def _to_minute_of_day(index):
     raise ValueError("cannot convert index to minutes since midnight")
 
 
+def _quadratic(xs, ys):
+    # fit a quadratic function of `xs` to the data in `ys`
+    coefficients = np.polyfit(xs, ys, 2)
+    return np.poly1d(coefficients)
+
+
+def quadratic_idxmax(data):
+    """Fit a quartic to the data returning the time where the vertex falls."""
+    quadratic = _quadratic(_to_minute_of_day(data.index), data)
+    model = quadratic(range(0, 1440))
+    return (
+        pd.Timestamp(data.index.min().date())
+        + pd.Timedelta(minutes=np.argmax(model))
+    )
+
+
 def quadratic(data):
     """Fit a quadratic to the data.
 
@@ -35,8 +51,7 @@ def quadratic(data):
     """
     minute_of_day = _to_minute_of_day(data.index)
     # Fit a quadratic to `data` returning R^2 for the fit.
-    coefficients = np.polyfit(minute_of_day, data, 2)
-    quadratic = np.poly1d(coefficients)
+    quadratic = _quadratic(minute_of_day, data)
     # Calculate the R^2 for the fit
     _, _, correlation, _, _ = scipy.stats.linregress(
         data, quadratic(minute_of_day)
